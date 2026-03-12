@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sinapsis nanomolecular 3D</title>
+  <style>
+    :root{
+      --bg-top:#edf3fb;
+      --bg-bottom:#d1dff1;
+      --ink:#213246;
+      --muted:#5f7591;
+      --panel:rgba(245,248,252,0.88);
+      --panel-strong:rgba(255,255,255,0.94);
+      --line:rgba(49,70,96,0.14);
+      --shadow:0 20px 46px rgba(27,41,61,0.16);
+      --blue:#3f76cf;
+      --blue-dark:#2e5fa8;
+      --teal:#2d8b99;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:"Aptos","Segoe UI",sans-serif;background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom));color:var(--ink)}
+    body::before{content:"";position:fixed;inset:0;background:radial-gradient(circle at top right,rgba(255,255,255,0.72),transparent 24%),radial-gradient(circle at bottom left,rgba(180,201,236,0.36),transparent 30%);pointer-events:none}
+    #app,#canvas-wrap{position:absolute;inset:0}
+    canvas{display:block;width:100%;height:100%}
+    .sidebar{position:absolute;left:18px;top:18px;bottom:18px;width:min(408px,calc(100vw - 36px));padding:18px;border-radius:30px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(16px);display:flex;flex-direction:column;gap:14px;z-index:10;transition:width .26s ease,padding .26s ease,transform .26s ease}
+    .sidebar.collapsed{width:92px;padding:18px 12px}
+    .sidebar.collapsed .detail,.sidebar.collapsed .footer{opacity:0;pointer-events:none;transform:translateX(-14px)}
+    .sidebar.collapsed .compact-stack{display:flex}
+    .sidebar.collapsed .brand-copy{opacity:0;width:0;overflow:hidden}
+    .brand{display:flex;align-items:center;gap:12px;min-height:48px}
+    .logo{width:44px;height:44px;border-radius:16px;background:linear-gradient(135deg,var(--blue),#83aff3);display:grid;place-items:center;color:#fff;font-weight:800;letter-spacing:.08em;box-shadow:0 12px 24px rgba(63,118,207,0.26)}
+    .brand-copy,.detail,.footer{transition:opacity .18s ease,transform .18s ease}
+    .eyebrow{margin:0;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:#7189a5}
+    h1{margin:4px 0 0;font-size:1.82rem;line-height:1.04}
+    .lede{margin:0;color:var(--muted);line-height:1.55;font-size:.97rem}
+    .section-title{margin:0 0 8px;font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:#6d84a0}
+    .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .controls-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .controls-4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .span-2{grid-column:span 2}
+    button{appearance:none;border:0;border-radius:18px;padding:12px 14px;font:inherit;font-weight:700;cursor:pointer;background:#fff;color:#27415e;box-shadow:0 10px 22px rgba(31,48,72,0.08);transition:transform .16s ease,background .16s ease,color .16s ease}
+    button:hover{transform:translateY(-1px)}
+    button.primary{background:linear-gradient(135deg,var(--blue),#7da7ee);color:#fff}
+    button.mode.active,button.toggle-btn.active,button.preset.active{background:linear-gradient(135deg,#364f77,#5b759b);color:#fff}
+    .legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px}
+    .legend-item{display:flex;align-items:center;gap:8px;font-size:.92rem;color:#334861}
+    .swatch{width:13px;height:13px;border-radius:999px;border:1px solid rgba(16,28,44,0.1);flex:0 0 auto}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,0.74);border:1px solid rgba(58,80,107,0.08);font-size:.84rem;color:#536981}
+    .slider-card{padding:14px 14px 12px;border-radius:20px;background:rgba(255,255,255,0.72);border:1px solid rgba(58,80,107,0.08)}
+    .slider-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .slider-row strong{font-size:.94rem}
+    .slider-value{padding:6px 10px;border-radius:999px;background:#eef3fb;color:#35516f;font-size:.82rem;font-weight:700}
+    .slider-note{margin:8px 0 0;color:var(--muted);font-size:.84rem;line-height:1.45}
+    input[type="range"]{width:100%;accent-color:var(--blue)}
+    .footer{margin-top:auto;padding-top:10px;border-top:1px solid rgba(71,91,118,0.12);font-size:.9rem;color:var(--muted);line-height:1.5}
+    .compact-stack{display:none;flex-direction:column;gap:10px;margin-top:8px}
+    .compact-pill{width:100%;aspect-ratio:1;border-radius:18px;background:rgba(255,255,255,0.74);display:grid;place-items:center;font-weight:800;color:#43607f;border:1px solid rgba(65,86,112,0.12)}
+    .toggle{position:absolute;left:calc(min(408px,calc(100vw - 36px)) + 30px);top:26px;z-index:11;border-radius:999px;padding:12px 16px;background:var(--panel-strong);border:1px solid var(--line)}
+    .toggle.compact{left:122px}
+    .hint,.status,.error{position:absolute;right:18px;z-index:10;background:var(--panel-strong);border:1px solid var(--line);box-shadow:var(--shadow)}
+    .hint{top:18px;padding:12px 16px;border-radius:999px;color:var(--muted);font-size:.9rem}
+    .status{right:18px;bottom:18px;width:min(364px,calc(100vw - 36px));padding:16px 18px;border-radius:24px}
+    .status strong{display:block;margin-bottom:6px}
+    .status span{color:var(--muted);line-height:1.5}
+    .error{left:50%;top:18px;right:auto;transform:translateX(-50%);padding:10px 14px;border-radius:999px;background:#fff1f0;border-color:rgba(153,69,61,0.2);color:#99453d;display:none}
+    @media (max-width:960px){
+      .sidebar{left:12px;top:12px;bottom:12px;width:min(360px,calc(100vw - 24px))}
+      .toggle{left:calc(min(360px,calc(100vw - 24px)) + 24px);top:20px}
+      .toggle.compact{left:108px}
+      .hint{right:12px;top:auto;bottom:112px;max-width:270px}
+      .status{right:12px;bottom:12px;width:min(320px,calc(100vw - 24px))}
+    }
+    @media (max-width:760px){
+      .sidebar{bottom:auto;height:min(82vh,780px)}
+      .hint{display:none}
+      .status{left:12px;right:12px;width:auto}
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="canvas-wrap"></div>
+    <div id="error" class="error"></div>
+    <aside id="sidebar" class="sidebar">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div class="brand-copy">
+          <p class="eyebrow">Sinapsis 3D</p>
+          <h1>Biblioteca molecular modular</h1>
+        </div>
+      </div>
+      <div class="detail">
+        <p class="lede">Escena comparativa en Three.js con elementos externos por molecula, datos declarativos y una organizacion lista para reutilizar cada pieza en otros momentos de la sinapsis.</p>
+        <div>
+          <p class="section-title">Vista</p>
+          <div class="controls">
+            <button id="btn-fire" class="primary span-2">Simular impulso</button>
+            <button id="btn-both" class="mode active">Ambas vistas</button>
+            <button id="btn-cut" class="mode">Solo corte</button>
+            <button id="btn-full" class="mode">Solo completas</button>
+            <button id="btn-reset" class="mode span-2">Reiniciar escena</button>
+          </div>
+        </div>
+        <div>
+          <p class="section-title">Camara</p>
+          <div class="controls-4">
+            <button class="preset active" data-preset="overview">General</button>
+            <button class="preset" data-preset="nanocolumn">Nanocolumna</button>
+            <button class="preset" data-preset="presynaptic">Presinapsis</button>
+            <button class="preset" data-preset="postsynaptic">Postsinapsis</button>
+          </div>
+        </div>
+        <div>
+          <p class="section-title">Herramientas</p>
+          <div class="controls">
+            <button id="btn-labels" class="toggle-btn active">Etiquetas</button>
+            <button id="btn-guides" class="toggle-btn active">Guias</button>
+          </div>
+        </div>
+        <div>
+          <p class="section-title">Leyenda molecular</p>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div>
+          <p class="section-title">Convenciones</p>
+          <div class="chips">
+            <span class="chip">1 archivo por molecula</span>
+            <span class="chip">Datos declarativos</span>
+            <span class="chip">Ensamblajes reutilizables</span>
+            <span class="chip">Presets de camara</span>
+          </div>
+        </div>
+        <div>
+          <p class="section-title">Iluminacion</p>
+          <div class="slider-card">
+            <div class="slider-row">
+              <strong>Exposicion</strong>
+              <span id="light-value" class="slider-value">0.46x</span>
+            </div>
+            <input id="light-slider" type="range" min="0.12" max="1.10" step="0.01" value="0.46" />
+            <p class="slider-note">Ajusta la exposicion en tiempo real. La paleta fue reforzada y las guias pueden apagarse para estudiar mejor la lectura molecular.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer">Arrastra para orbitar. Usa la rueda para acercar mucho mas, y <strong>Shift + arrastre</strong>, boton derecho o boton central para desplazarte lateralmente por la composicion. Doble clic para recentrar el preset actual.</div>
+      <div class="compact-stack">
+        <div class="compact-pill">3D</div>
+        <div class="compact-pill">Mods</div>
+        <div class="compact-pill">UI</div>
+      </div>
+    </aside>
+    <button id="sidebar-toggle" class="toggle" aria-expanded="true">Ocultar panel</button>
+    <div class="hint">Arrastra para orbitar. Shift + arrastre o boton derecho para paneo. Rueda para zoom fino.</div>
+    <div class="status"><strong id="status-title">Vista activa: comparacion lado a lado</strong><span id="status-text">Corte coronal a la izquierda y moleculas completas a la derecha. La animacion muestra acoplamiento vesicular, liberacion y activacion postsinaptica.</span></div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script type="module" src="./sinapsis-modules/main.js"></script>
+</body>
+</html>
